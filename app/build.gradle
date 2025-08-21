@@ -30,7 +30,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
 
     implementation project(':BaseOkHttpX')
-    implementation 'com.github.kongzue:BaseJson:1.2.8'
+    implementation 'com.github.kongzue:BaseJson:1.2.9.6'
     implementation 'com.github.kongzue:StackLabel:1.1.8'
     implementation 'com.squareup.okhttp3:okhttp:4.9.1'
 }

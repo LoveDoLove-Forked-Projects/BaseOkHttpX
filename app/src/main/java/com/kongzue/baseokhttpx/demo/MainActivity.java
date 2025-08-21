@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
 
@@ -25,6 +26,7 @@ import com.kongzue.baseokhttp.x.interfaces.OpenAIAPIResponseListener;
 import com.kongzue.baseokhttp.x.util.BaseHttpRequest;
 import com.kongzue.baseokhttp.x.util.LockLog;
 import com.kongzue.baseokhttpx.demo.databinding.ActivityMainBinding;
+import com.kongzue.baseokhttpx.demo.models.SentencesModel;
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -73,6 +75,10 @@ public class MainActivity extends AppCompatActivity {
                                 binding.imgResult.setVisibility(View.GONE);
                                 binding.txtResult.setVisibility(View.VISIBLE);
                                 binding.txtResult.setText(main.toString(4));
+
+                                SentencesModel sentencesModel = main.toBean(SentencesModel.class);
+                                Log.e(">>>", "sentencesModel: " + sentencesModel);
+                                Log.e(">>>", "2json: " + JsonMap.toJsonMap(sentencesModel));
                             }
                         })
                         .go();

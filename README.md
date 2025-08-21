@@ -152,6 +152,45 @@ BaseOkHttpX 支持多种回调类型，具体如下：
 | [BaseResponseListener](BaseOkHttpX/src/main/java/com/kongzue/baseokhttp/x/interfaces/BaseResponseListener.java) | 仅返回原始的 okHttp 的 ResponseBody 用于自行处理             | `ResponseBody` |
 | [BitmapResponseListener](BaseOkHttpX/src/main/java/com/kongzue/baseokhttp/x/interfaces/BitmapResponseListener.java) | 会以位图 Bitmap 格式的返回服务器响应的数据                   | `Bitmap`       |
 
+#### JavaBean 支持
+
+BaseJson 从 1.2.9.6 版本起支持将 json 转换为 JavaBean/Model 对象，只需要在需要解析到的对象中的变量使用 `@JsonValue(key)` 注解即可：
+
+```java
+//例如
+public class SentencesBean{
+
+    @JsonValue("code")
+    private int code;
+
+    @JsonValue("message")
+    private String message;
+
+    @JsonValue("result")
+    private ResultModel result;
+
+    @Override
+    public String toString() {
+        return "SentencesBean{" +
+                "code=" + code +
+                ", message='" + message + '\'' +
+                ", result=" + result +
+                '}';
+    }
+}
+```
+
+然后使用以下方法进行 JsonMap 与 JavaBean/Model 的转换：
+
+```java
+//将 jsonMap 转换为 Bean：
+SentencesBean bean = jsonMap.toBean(SentencesBean.class);
+
+//要将 Bean 反向转为 JsonMap，可以使用：
+JsonMap jsonData = JsonMap.toJsonMap(bean);
+```
+详情请参阅 [BaseJson](https://github.com/kongzue/BaseJson) 的说明文档
+
 ### 添加参数
 
 BaseOkHttpX 默认支持文本、Json、Form表单和上传文件的参数类型，要添加参数可以通过 `addParameter()` 方法进行：
