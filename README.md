@@ -152,7 +152,7 @@ BaseOkHttpX 支持多种回调类型，具体如下：
 | [BaseResponseListener](BaseOkHttpX/src/main/java/com/kongzue/baseokhttp/x/interfaces/BaseResponseListener.java) | 仅返回原始的 okHttp 的 ResponseBody 用于自行处理             | `ResponseBody` |
 | [BitmapResponseListener](BaseOkHttpX/src/main/java/com/kongzue/baseokhttp/x/interfaces/BitmapResponseListener.java) | 会以位图 Bitmap 格式的返回服务器响应的数据                   | `Bitmap`       |
 
-#### JavaBean 支持
+### JavaBean 支持
 
 BaseJson 从 1.2.9.6 版本起支持将 json 转换为 JavaBean/Model 对象，只需要在需要解析到的对象中的变量使用 `@JsonValue(key)` 注解即可：
 
