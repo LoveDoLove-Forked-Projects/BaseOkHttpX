@@ -17,6 +17,10 @@ public abstract class BitmapResponseListener implements BaseResponseListener {
     @Override
     @Deprecated
     public void response(BaseHttpRequest httpRequest, ResponseBody responseBody, Exception error) {
+        if (error != null) {
+            response(httpRequest, Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888), error);
+            return;
+        }
         try {
             InputStream inputStream = responseBody.byteStream();
             response(httpRequest, BitmapFactory.decodeStream(inputStream), error);

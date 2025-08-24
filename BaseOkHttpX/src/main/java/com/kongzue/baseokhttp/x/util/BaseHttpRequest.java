@@ -182,7 +182,7 @@ public class BaseHttpRequest implements LifecycleOwner {
         requestInfo = new RequestInfo(url, getRequestParameter());
         if (BaseOkHttpX.disallowSameRequest && equalsRequestInfo(requestInfo) != null) {
             LockLog.logE(TAG_RETURN, "拦截重复请求:" + requestInfo);
-            onFail(new SameRequestException( requestInfo));
+            onFail(new SameRequestException(requestInfo));
             return;
         }
         addRequestInfo(requestInfo);
@@ -366,14 +366,12 @@ public class BaseHttpRequest implements LifecycleOwner {
     }
 
     private void callCallbacks() {
-        ResponseBody interceptRequestBody = ResponseBody.create(responseBytes, responseMediaType);
         if (BaseOkHttpX.responseInterceptListener != null &&
-                BaseOkHttpX.responseInterceptListener.onIntercept(BaseHttpRequest.this, interceptRequestBody, responseException)) {
+                BaseOkHttpX.responseInterceptListener.onIntercept(BaseHttpRequest.this, (responseBytes == null || responseMediaType == null) ? null : ResponseBody.create(responseBytes, responseMediaType), responseException)) {
             return;
         }
         for (BaseResponseListener callback : callbacks) {
-            ResponseBody result = ResponseBody.create(responseBytes, responseMediaType);
-            callback.response(BaseHttpRequest.this, result, responseException);
+            callback.response(BaseHttpRequest.this, (responseBytes == null || responseMediaType == null) ? null :ResponseBody.create(responseBytes, responseMediaType), responseException);
         }
     }
 
@@ -1081,7 +1079,6 @@ public class BaseHttpRequest implements LifecycleOwner {
 
     /**
      * 重新发起请求。
-     *
      */
     public void retry() {
         cancel();

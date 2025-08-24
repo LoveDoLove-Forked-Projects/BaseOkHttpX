@@ -1,5 +1,7 @@
 package com.kongzue.baseokhttp.x.interfaces;
 
+import android.graphics.Bitmap;
+
 import com.kongzue.baseokhttp.x.util.BaseHttpRequest;
 
 import okhttp3.ResponseBody;
@@ -12,6 +14,10 @@ public abstract class ResponseListener implements BaseResponseListener  {
     @Override
     @Deprecated
     public void response(BaseHttpRequest httpRequest, ResponseBody responseBody, Exception error) {
+        if (error != null) {
+            response(httpRequest, "", error);
+            return;
+        }
         try {
             String data = responseBody.string();
             response(httpRequest, data, error);

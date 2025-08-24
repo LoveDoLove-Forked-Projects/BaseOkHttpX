@@ -45,8 +45,13 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // 设置总服务器地址
         BaseOkHttpX.serviceUrl = "https://api.apiopen.top/";
-        BaseOkHttpX.reserveServiceUrls = new String[]{"https://api.apiopen2.top/", "https://api.apiopen3.top/", "https://api.apiopen4.top/"};
+
+        // 容灾地址测试
+        //BaseOkHttpX.reserveServiceUrls = new String[]{"https://api.apiopen2.top/", "https://api.apiopen3.top/", "https://api.apiopen4.top/"};
+
+        // 全局参数测试
         //BaseOkHttpX.globalParameter = new Parameter().add("t1", "v1");
 
         // 日志拦截器测试
