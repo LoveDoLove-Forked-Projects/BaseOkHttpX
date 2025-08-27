@@ -117,14 +117,18 @@ public class MainActivity extends AppCompatActivity {
                         .downloadToFile(cacheFile, new DownloadListener() {
 
                             @Override
-                            public void onDownload(BaseHttpRequest httpRequest, File downloadFile, float progress, long current, long total, boolean done) {
-                                binding.imgResult.setVisibility(View.GONE);
-                                binding.txtResult.setVisibility(View.VISIBLE);
-                                String progressText = (done ? "下载完毕：" : "正在下载：") + " 进度：" + new BigDecimal(progress).setScale(4, RoundingMode.HALF_UP).toPlainString() + " 总共：" + total + " 已完成：" + current;
-                                if (binding.txtResult.getText().length() == 0) {
-                                    binding.txtResult.setText(progressText);
+                            public void onDownload(BaseHttpRequest httpRequest, File downloadFile, float progress, long current, long total, boolean done, Exception error) {
+                                if (error == null) {
+                                    binding.imgResult.setVisibility(View.GONE);
+                                    binding.txtResult.setVisibility(View.VISIBLE);
+                                    String progressText = (done ? "下载完毕：" : "正在下载：") + " 进度：" + new BigDecimal(progress).setScale(4, RoundingMode.HALF_UP).toPlainString() + " 总共：" + total + " 已完成：" + current;
+                                    if (binding.txtResult.getText().length() == 0) {
+                                        binding.txtResult.setText(progressText);
+                                    } else {
+                                        binding.txtResult.append("\n" + progressText);
+                                    }
                                 } else {
-                                    binding.txtResult.append("\n" + progressText);
+                                    binding.txtResult.setText("下载失败：" + error);
                                 }
                             }
                         })

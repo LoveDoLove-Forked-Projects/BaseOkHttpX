@@ -155,6 +155,12 @@ public class BaseHttpRequest implements LifecycleOwner {
         responseBytes = null;
         responseMediaType = null;
         responseException = null;
+        updateProgressCurrent = 0;
+        updateProgressTotal = 0;
+        updateProgressDone = false;
+        downloadProgress = 0;
+        downloadProgressCurrent = 0;
+        downloadProgressTotal = 0;
         if (isShowLogs()) {
             LockLog.Builder logBuilder = LockLog.Builder.create()
                     .i(TAG_SEND, "-------------------------------------")
@@ -355,7 +361,7 @@ public class BaseHttpRequest implements LifecycleOwner {
                     while ((len = is.read(buf)) != -1) {
                         fos.write(buf, 0, len);
                         sum += len;
-                        callDownloadingCallback(sum * 1.0f / total, sum, total);
+                        callDownloadingCallback(sum * 1.0f / total, sum, total, null);
                     }
                     fos.flush();
                 }
@@ -371,7 +377,7 @@ public class BaseHttpRequest implements LifecycleOwner {
             return;
         }
         for (BaseResponseListener callback : callbacks) {
-            callback.response(BaseHttpRequest.this, (responseBytes == null || responseMediaType == null) ? null :ResponseBody.create(responseBytes, responseMediaType), responseException);
+            callback.response(BaseHttpRequest.this, (responseBytes == null || responseMediaType == null) ? null : ResponseBody.create(responseBytes, responseMediaType), responseException);
         }
     }
 
@@ -421,6 +427,8 @@ public class BaseHttpRequest implements LifecycleOwner {
                 callCallbacks();
             }
         }
+        callUploadingCallback(updateProgressCurrent, updateProgressTotal, updateProgressDone, e);
+        callDownloadingCallback(downloadProgress, downloadProgressCurrent, downloadProgressTotal, e);
     }
 
     private OkHttpClient createClient() {
@@ -479,7 +487,7 @@ public class BaseHttpRequest implements LifecycleOwner {
         RequestBody requestBody = originRequestBody == null ? null : new RequestBodyImpl(originRequestBody) {
             @Override
             public void onUploading(long current, long total, boolean done) {
-                callUploadingCallback(current, total, done);
+                callUploadingCallback(current, total, done, null);
             }
         };
         switch (requestType) {
@@ -510,7 +518,11 @@ public class BaseHttpRequest implements LifecycleOwner {
         return builder.build();
     }
 
-    private void callUploadingCallback(long current, long total, boolean done) {
+    long updateProgressCurrent;
+    long updateProgressTotal;
+    boolean updateProgressDone;
+
+    private void callUploadingCallback(long current, long total, boolean done, Exception error) {
         if (getUploadListener() == null) return;
         if (callbackInMainLooper) {
             Looper mainLooper = Looper.getMainLooper();
@@ -518,7 +530,7 @@ public class BaseHttpRequest implements LifecycleOwner {
             handler.post(new Runnable() {
                 @Override
                 public void run() {
-                    getUploadListener().onUpload(BaseHttpRequest.this, (float) current / total, current, total, done);
+                    getUploadListener().onUpload(BaseHttpRequest.this, (float) current / total, current, total, done, error);
                 }
             });
         } else {
@@ -526,25 +538,34 @@ public class BaseHttpRequest implements LifecycleOwner {
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        getUploadListener().onUpload(BaseHttpRequest.this, (float) current / total, current, total, done);
+                        getUploadListener().onUpload(BaseHttpRequest.this, (float) current / total, current, total, done, error);
                     }
                 });
             } else {
-                getUploadListener().onUpload(BaseHttpRequest.this, (float) current / total, current, total, done);
+                getUploadListener().onUpload(BaseHttpRequest.this, (float) current / total, current, total, done, error);
             }
+        }
+        if (error == null) {
+            updateProgressCurrent = current;
+            updateProgressTotal = total;
+            updateProgressDone = done;
         }
     }
 
-    private void callDownloadingCallback(float progress, long sum, long total) {
+    float downloadProgress;
+    long downloadProgressCurrent;
+    long downloadProgressTotal;
+
+    private void callDownloadingCallback(float progress, long current, long total, Exception error) {
         if (getDownloadListener() == null) return;
-        LockLog.logI(TAG_RETURN, "下载：" + getUrl() + " 进度：" + progress + " 已下载：" + sum + " 总共：" + total);
+        LockLog.logI(TAG_RETURN, "下载：" + getUrl() + " 进度：" + progress + " 已下载：" + current + " 总共：" + total);
         if (callbackInMainLooper) {
             Looper mainLooper = Looper.getMainLooper();
             handler = new Handler(mainLooper);
             handler.post(new Runnable() {
                 @Override
                 public void run() {
-                    getDownloadListener().onDownload(BaseHttpRequest.this, downloadFile, progress, sum, total, progress >= 1f);
+                    getDownloadListener().onDownload(BaseHttpRequest.this, downloadFile, progress, current, total, progress >= 1f, error);
                 }
             });
         } else {
@@ -552,12 +573,17 @@ public class BaseHttpRequest implements LifecycleOwner {
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        getDownloadListener().onDownload(BaseHttpRequest.this, downloadFile, progress, sum, total, progress >= 1f);
+                        getDownloadListener().onDownload(BaseHttpRequest.this, downloadFile, progress, current, total, progress >= 1f, error);
                     }
                 });
             } else {
-                getDownloadListener().onDownload(BaseHttpRequest.this, downloadFile, progress, sum, total, progress >= 1f);
+                getDownloadListener().onDownload(BaseHttpRequest.this, downloadFile, progress, current, total, progress >= 1f, error);
             }
+        }
+        if (error == null) {
+            downloadProgress = progress;
+            downloadProgressCurrent = current;
+            downloadProgressTotal = total;
         }
     }
 
@@ -978,15 +1004,17 @@ public class BaseHttpRequest implements LifecycleOwner {
     public void setRequesting(boolean requesting) {
         this.requesting = requesting;
         if (requesting) {
-            timeoutChecker = new Timer();
-            timeoutChecker.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    if (isRequesting()) {
-                        onFail(new TimeOutException());
+            if (!streamRequest) {
+                timeoutChecker = new Timer();
+                timeoutChecker.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        if (isRequesting()) {
+                            onFail(new TimeOutException());
+                        }
                     }
-                }
-            }, timeoutDuration * 1000);
+                }, timeoutDuration * 1000);
+            }
             setLifecycleState(Lifecycle.State.STARTED);
         } else {
             if (timeoutChecker != null) {
@@ -1505,5 +1533,59 @@ public class BaseHttpRequest implements LifecycleOwner {
      */
     public boolean isError() {
         return responseException == null;
+    }
+
+    /**
+     * 获取上传进度的已上传字节数
+     *
+     * @return 已上传字节数
+     */
+    public long getUpdateProgressCurrent() {
+        return updateProgressCurrent;
+    }
+
+    /**
+     * 获取上传进度的总字节数
+     *
+     * @return 总字节数
+     */
+    public long getUpdateProgressTotal() {
+        return updateProgressTotal;
+    }
+
+    /**
+     * 获取上传进度是否完成
+     *
+     * @return 是否完成
+     */
+    public boolean isUpdateProgressDone() {
+        return updateProgressDone;
+    }
+
+    /**
+     * 获取下载进度的百分比
+     *
+     * @return 当前下载进度（0~1）
+     */
+    public float getDownloadProgress() {
+        return downloadProgress;
+    }
+
+    /**
+     * 获取下载进度的已完成字节数
+     *
+     * @return 已完成字节数
+     */
+    public long getDownloadProgressCurrent() {
+        return downloadProgressCurrent;
+    }
+
+    /**
+     * 获取下载进度的总字节数
+     *
+     * @return 总字节数
+     */
+    public long getDownloadProgressTotal() {
+        return downloadProgressTotal;
     }
 }

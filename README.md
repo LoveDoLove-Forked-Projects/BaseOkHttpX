@@ -4,6 +4,7 @@
 </div>
 
 
+
 基于 OkHttp 的二次封装网络请求框架，更简洁易用，符合应用开发者使用习惯，能够自动处理异步线程问题，具备丰富的扩展性，全局拦截器以及实用的日志输出控制，让网络请求变得更加简单。
 
 <div align=center>
@@ -20,6 +21,7 @@
     <img src="https://img.shields.io/badge/Homepage-Kongzue.com-brightgreen.svg" alt="Homepage">
   </a>
 </div>
+
 
 
 ## BaseOkHttpX 优势
@@ -189,6 +191,7 @@ SentencesBean bean = jsonMap.toBean(SentencesBean.class);
 //要将 Bean 反向转为 JsonMap，可以使用：
 JsonMap jsonData = JsonMap.toJsonMap(bean);
 ```
+
 详情请参阅 [BaseJson](https://github.com/kongzue/BaseJson) 的说明文档
 
 ### 添加参数
@@ -333,8 +336,10 @@ Post.create(MainActivity.this, "/api/login")
 ```java
 .setUploadListener(new UploadListener() {
     @Override
-    public void onUpload(BaseHttpRequest httpRequest, float progress, long current, long total, boolean done) {
-        
+    public void onUpload(BaseHttpRequest httpRequest, float progress, long current, long total, boolean done, Exception error) {
+        if (error == null) {
+            //...
+        }
     }
 })
 ```
@@ -349,7 +354,10 @@ Post.create(MainActivity.this, "/api/login")
 getRequest(MainActivity.this, "https://dl.coolapk.com/down?pn=com.coolapk.market&id=NDU5OQ&h=46bb9d98&from=from-web")
         .downloadToFile(cacheFile, new DownloadListener() {
             @Override
-            public void onDownload(BaseHttpRequest httpRequest, File downloadFile, float progress, long current, long total, boolean done) {
+            public void onDownload(BaseHttpRequest httpRequest, File downloadFile, float progress, long current, long total, boolean done, Exception error) {
+                if (error == null) {
+                    //...
+                }
             }
         })
         .go();
@@ -522,6 +530,24 @@ Get、Post、Delete、Patch、Put 在创建请求后会返回实例化的 `BaseH
   
 // 重新请求
 .retry()
+  
+// 获取上传进度的已上传字节数
+.getUpdateProgressCurrent()
+
+// 获取上传进度的总字节数
+.getUpdateProgressTotal()
+
+// 获取上传进度是否完成
+.isUpdateProgressDone()
+
+// 获取下载进度的百分比
+.getDownloadProgress()
+
+// 获取下载进度的已完成字节数
+.getDownloadProgressCurrent()
+
+//获取下载进度的总字节数
+.getDownloadProgressTotal()
 ```
 
 ## ToDo

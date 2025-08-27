@@ -2,6 +2,8 @@ package com.kongzue.baseokhttp.x.interfaces;
 
 import com.kongzue.baseokhttp.x.util.BaseHttpRequest;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.io.File;
 
 /**
@@ -18,6 +20,7 @@ public interface DownloadListener {
      * @param current      已完成字节数
      * @param total        文件总大小
      * @param done         是否下载完成
+     * @param error        异常信息
      */
-    void onDownload(BaseHttpRequest httpRequest, File downloadFile, float progress, long current, long total, boolean done);
+    void onDownload(BaseHttpRequest httpRequest, File downloadFile, float progress, long current, long total, boolean done, @Nullable Exception error);
 }
