@@ -467,7 +467,7 @@ Mock 数据是一种对于本地调试极为好用的方式，通过配置 mock 
 .setEnableMock(true)
         
 // 通过 asset 文件指定本次接口返回的数据内容
-.setMockAssetFile(MainActivity.this,"sentences.json")
+.setMockAssetFile(MainActivity.this, "sentences.json")
 
 // 通过文本指定本次接口返回的内容
 .setMockData("接口返回的数据内容")
@@ -482,6 +482,20 @@ Mock 数据是一种对于本地调试极为好用的方式，通过配置 mock 
 ```java
 // 请求发起 3000 毫秒后返回 mock 数据
 BaseOkHttpX.mockRequestDelay = 3000;
+```
+
+### 通过全局配置 mock 数据
+
+通过全局配置指定 mock 数据，仅当 **BaseHttpRequest 请求实例未设置 enableMock 时（即，未通过 setEnableMock() 方法指定开启 mock 数据）** 或 **启用了 enableMock 属性但未指定实例的 mockData 时**，使用全局配置的 mock 数据：
+```java
+// 自行通过 HashMap 配置全局 mock 数据，其中 key 指定完整 url 或者局部 subUrl（都可匹配）
+BaseOkHttpX.globalMockData = new HashMap<String, byte[]>();
+
+// 通过方法添加配置全局 mock 数据，除此之外 addGlobalMockData 还支持指定 String、JsonMap、JSONObject 类型的数据返回：
+BaseOkHttpX.addGlobalMockData("/api/sentences", bytes);
+
+// 通过方法添加位于 asset 的配置全局 mock 数据文件：
+BaseOkHttpX.addGlobalMockDataFromAssetFile(MainActivity.this, "/api/sentences", "sentences.json");
 ```
 
 ## 日志输出

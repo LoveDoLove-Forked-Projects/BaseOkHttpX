@@ -70,13 +70,14 @@ public class MainActivity extends AppCompatActivity {
 //        };
 
         BaseOkHttpX.mockRequestDelay = 3000;
+        BaseOkHttpX.addGlobalMockDataFromAssetFile(MainActivity.this, "/api/sentences", "sentences.json");
 
         binding.btnGetTest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Get.create("/api/sentences")
-                        .setEnableMock(true)
-                        .setMockAssetFile(MainActivity.this,"sentences.json")
+//                        .setEnableMock(true)
+//                        .setMockAssetFile(MainActivity.this,"sentences.json")
                         .addParameter("ids[]", 1, 2, 3, 4, 5)
                         .setCallback(new JsonResponseListener() {
                             @Override

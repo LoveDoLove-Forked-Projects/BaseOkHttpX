@@ -1,13 +1,21 @@
 package com.kongzue.baseokhttp.x;
 
+import android.content.Context;
+
+import com.kongzue.baseokhttp.util.JsonMap;
 import com.kongzue.baseokhttp.x.interfaces.BaseResponseInterceptListener;
 import com.kongzue.baseokhttp.x.interfaces.HeaderInterceptListener;
 import com.kongzue.baseokhttp.x.interfaces.ParameterInterceptListener;
 import com.kongzue.baseokhttp.x.interfaces.ResponseInterceptListener;
+import com.kongzue.baseokhttp.x.util.AssetHelper;
+import com.kongzue.baseokhttp.x.util.BaseHttpRequest;
 import com.kongzue.baseokhttp.x.util.Parameter;
+
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import okhttp3.Cache;
 import okhttp3.Cookie;
@@ -65,6 +73,67 @@ public class BaseOkHttpX {
 
     // mock 数据延迟返回（ms）
     public static long mockRequestDelay = 0;
+
+    // 全局 mock 数据
+    public static Map<String, byte[]> globalMockData;
+
+    // 判断一个请求是否启用 mock 数据
+    public static boolean isRequestMockEnable(BaseHttpRequest request) {
+        if (request == null) {
+            return false;
+        }
+        if (request.isEnableMock() != null) {
+            return request.isEnableMock();
+        }
+        return (globalMockData.get(request.getUrl()) != null || globalMockData.get(request.getSubUrl()) != null) && request.isEnableMock() == null;
+    }
+
+    // 添加 mock 数据
+    public static void addGlobalMockData(String url, byte[] mockData) {
+        if (globalMockData == null) {
+            globalMockData = new HashMap<>();
+        }
+        globalMockData.put(url, mockData);
+    }
+
+    // 添加 mock 数据
+    public static void addGlobalMockData(String url, String mockData) {
+        if (globalMockData == null) {
+            globalMockData = new HashMap<>();
+        }
+        globalMockData.put(url, mockData.getBytes());
+    }
+
+    // 添加 mock 数据
+    public static void addGlobalMockData(String url, JsonMap mockData) {
+        if (globalMockData == null) {
+            globalMockData = new HashMap<>();
+        }
+        globalMockData.put(url, mockData.toString().getBytes());
+    }
+
+    // 添加 mock 数据
+    public static void addGlobalMockData(String url, JSONObject mockData) {
+        if (globalMockData == null) {
+            globalMockData = new HashMap<>();
+        }
+        globalMockData.put(url, mockData.toString().getBytes());
+    }
+
+    // 添加 mock 数据
+    public static void addGlobalMockDataFromAssetFile(Context context, String url, String assetFileName) {
+        if (globalMockData == null) {
+            globalMockData = new HashMap<>();
+        }
+        globalMockData.put(url, AssetHelper.readTextFromAssets(context, assetFileName).toString().getBytes());
+    }
+
+    // 删除 mock 数据
+    public static void removeGlobalMockData(String url) {
+        if (globalMockData != null) {
+            globalMockData.remove(url);
+        }
+    }
 
     //ToDo: WebSocket
 }

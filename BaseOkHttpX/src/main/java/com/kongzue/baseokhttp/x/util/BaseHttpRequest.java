@@ -118,7 +118,7 @@ public class BaseHttpRequest implements LifecycleOwner {
     protected String cookieStr;
     protected boolean streamRequest;                            // 流式请求
     protected LifecycleRegistry lifecycle = new LifecycleRegistry(this);
-    protected boolean enableMock;                               // 启用 mock 数据
+    protected Boolean enableMock;                               // 启用 mock 数据
     protected byte[] mockData;                                  // mock 数据
 
     protected boolean requesting;
@@ -179,7 +179,7 @@ public class BaseHttpRequest implements LifecycleOwner {
                     .build();
         }
 
-        if (isEnableMock()) {
+        if (BaseOkHttpX.isRequestMockEnable(this) && getMockData() != null) {
             setLifecycleState(Lifecycle.State.CREATED);
 
             if (handler == null) {
@@ -1658,7 +1658,7 @@ public class BaseHttpRequest implements LifecycleOwner {
         return downloadProgressTotal;
     }
 
-    public boolean isEnableMock() {
+    public Boolean isEnableMock() {
         return enableMock;
     }
 
@@ -1674,6 +1674,13 @@ public class BaseHttpRequest implements LifecycleOwner {
     }
 
     public byte[] getMockData() {
+        if (mockData == null) {
+            byte[] result = BaseOkHttpX.globalMockData.get(getUrl());
+            if (result != null) {
+                return result;
+            }
+            return BaseOkHttpX.globalMockData.get(getSubUrl());
+        }
         return mockData;
     }
 
