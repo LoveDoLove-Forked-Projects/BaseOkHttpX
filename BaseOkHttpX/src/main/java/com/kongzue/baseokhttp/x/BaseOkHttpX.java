@@ -63,5 +63,8 @@ public class BaseOkHttpX {
     // 全局请求参数
     public static Parameter globalParameter;
 
+    // mock 数据延迟返回（ms）
+    public static long mockRequestDelay = 0;
+
     //ToDo: WebSocket
 }

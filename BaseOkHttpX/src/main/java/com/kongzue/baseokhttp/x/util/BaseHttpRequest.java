@@ -34,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -41,6 +42,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.Proxy;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.SecureRandom;
@@ -116,6 +118,8 @@ public class BaseHttpRequest implements LifecycleOwner {
     protected String cookieStr;
     protected boolean streamRequest;                            // 流式请求
     protected LifecycleRegistry lifecycle = new LifecycleRegistry(this);
+    protected boolean enableMock;                               // 启用 mock 数据
+    protected byte[] mockData;                                  // mock 数据
 
     protected boolean requesting;
 
@@ -173,88 +177,155 @@ public class BaseHttpRequest implements LifecycleOwner {
             }
             logBuilder.i(TAG_SEND, "=====================================")
                     .build();
-
         }
-        OkHttpClient client = okHttpClient == null ? createClient() : okHttpClient;
 
-        setLifecycleState(Lifecycle.State.CREATED);
+        if (isEnableMock()) {
+            setLifecycleState(Lifecycle.State.CREATED);
 
-        Request request = createRequest();
-        httpCall = client.newCall(request);
-        if (handler == null) {
-            Looper myLooper = Looper.myLooper();
-            handler = myLooper == null ? null : new Handler(myLooper);
-        }
-        requestInfo = new RequestInfo(url, getRequestParameter());
-        if (BaseOkHttpX.disallowSameRequest && equalsRequestInfo(requestInfo) != null) {
-            LockLog.logE(TAG_RETURN, "拦截重复请求:" + requestInfo);
-            onFail(new SameRequestException(requestInfo));
-            return;
-        }
-        addRequestInfo(requestInfo);
-        setRequesting(true);
-        if (callAsync) {
-            try (Response response = httpCall.execute()) {
-                onFinish(response);
-            } catch (Exception e) {
-                onFail(e);
+            if (handler == null) {
+                Looper myLooper = Looper.myLooper();
+                handler = myLooper == null ? null : new Handler(myLooper);
             }
-        } else {
-            httpCall.enqueue(new Callback() {
-                @Override
-                public void onFailure(@NotNull Call call, @NotNull IOException e) {
+
+            if (BaseOkHttpX.disallowSameRequest && equalsRequestInfo(requestInfo) != null) {
+                LockLog.logE(TAG_RETURN, "拦截重复请求:" + requestInfo);
+                onFail(new SameRequestException(requestInfo));
+                return;
+            }
+
+            addRequestInfo(requestInfo);
+            setRequesting(true);
+            if (isCallAsync()) {
+                try {
+                    Thread.sleep(BaseOkHttpX.mockRequestDelay);
+                    onFinish(createMockResponse(getMockData()));
                     setRequesting(false);
+                } catch (Exception e) {
                     onFail(e);
                 }
+            } else {
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        onFinish(createMockResponse(getMockData()));
+                        setRequesting(false);
+                    }
+                }, BaseOkHttpX.mockRequestDelay);
+            }
+        } else {
+            OkHttpClient client = okHttpClient == null ? createClient() : okHttpClient;
 
-                @Override
-                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                    try {
-                        if (isStreamRequest()) {
-                            if (!response.isSuccessful()) {
-                                onFail(new RequestException(call, response.code()));
-                                return;
-                            }
-                            try (ResponseBody responseBody = response.body();
-                                 BufferedReader reader = new BufferedReader(
-                                         new InputStreamReader(responseBody.byteStream()))) {
-                                if (isShowLogs()) {
-                                    LockLog.Builder logBuilder = LockLog.Builder.create()
-                                            .i(TAG_RETURN, "-------------------------------------")
-                                            .i(TAG_RETURN, "成功" + requestType.name() + "请求:" + getUrl() + " 返回时间：" + getNowTimeStr());
-                                    if (requestBodyType != null) {
-                                        logBuilder.i(TAG_RETURN, requestBodyType.name() + "参数:\n" + formatParameterStr());
+            setLifecycleState(Lifecycle.State.CREATED);
+
+            Request request = createRequest();
+            httpCall = client.newCall(request);
+            if (handler == null) {
+                Looper myLooper = Looper.myLooper();
+                handler = myLooper == null ? null : new Handler(myLooper);
+            }
+            requestInfo = new RequestInfo(url, getRequestParameter());
+            if (BaseOkHttpX.disallowSameRequest && equalsRequestInfo(requestInfo) != null) {
+                LockLog.logE(TAG_RETURN, "拦截重复请求:" + requestInfo);
+                onFail(new SameRequestException(requestInfo));
+                return;
+            }
+            addRequestInfo(requestInfo);
+            setRequesting(true);
+            if (isCallAsync()) {
+                try (Response response = httpCall.execute()) {
+                    onFinish(response.body());
+                    setRequesting(false);
+                } catch (Exception e) {
+                    onFail(e);
+                }
+            } else {
+                httpCall.enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                        setRequesting(false);
+                        onFail(e);
+                    }
+
+                    @Override
+                    public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                        try {
+                            if (isStreamRequest()) {
+                                if (!response.isSuccessful()) {
+                                    onFail(new RequestException(call, response.code()));
+                                    return;
+                                }
+                                try (ResponseBody responseBody = response.body();
+                                     BufferedReader reader = new BufferedReader(
+                                             new InputStreamReader(responseBody.byteStream()))) {
+                                    if (isShowLogs()) {
+                                        LockLog.Builder logBuilder = LockLog.Builder.create()
+                                                .i(TAG_RETURN, "-------------------------------------")
+                                                .i(TAG_RETURN, "成功" + requestType.name() + "请求:" + getUrl() + " 返回时间：" + getNowTimeStr());
+                                        if (requestBodyType != null) {
+                                            logBuilder.i(TAG_RETURN, requestBodyType.name() + "参数:\n" + formatParameterStr());
+                                        }
+                                        logBuilder.i(TAG_RETURN, "返回内容:");
+                                        logBuilder.build();
                                     }
-                                    logBuilder.i(TAG_RETURN, "返回内容:");
-                                    logBuilder.build();
+                                    String line;
+                                    while ((line = reader.readLine()) != null) {
+                                        onStream(line, responseBody.contentType());
+                                    }
+                                    if (isShowLogs()) {
+                                        LockLog.logI(TAG_RETURN, "=====================================");
+                                    }
+                                    setRequesting(false);
                                 }
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    onStream(line, responseBody.contentType());
-                                }
-                                if (isShowLogs()) {
-                                    LockLog.logI(TAG_RETURN, "=====================================");
-                                }
+                            } else {
+                                onFinish(response.body());
                                 setRequesting(false);
                             }
-                        } else {
-                            onFinish(response);
-                            setRequesting(false);
+                        } finally {
+                            response.close();
                         }
-                    } finally {
-                        response.close();
                     }
-                }
-            });
-        }
+                });
+            }
 
-        if (multiRequestList != null) {
-            for (BaseHttpRequest otherRequest : multiRequestList) {
-                if (otherRequest.getLifecycle().getCurrentState() == Lifecycle.State.INITIALIZED) {
-                    otherRequest.go();
+            if (multiRequestList != null) {
+                for (BaseHttpRequest otherRequest : multiRequestList) {
+                    if (otherRequest.getLifecycle().getCurrentState() == Lifecycle.State.INITIALIZED) {
+                        otherRequest.go();
+                    }
                 }
             }
         }
+    }
+
+    private ResponseBody createMockResponse(byte[] mockData) {
+        try {
+            String mimeType = URLConnection.guessContentTypeFromStream(new ByteArrayInputStream(mockData));
+            if (mimeType == null) {
+                String content = new String(mockData, StandardCharsets.UTF_8).trim();
+                if (content.startsWith("{") || content.startsWith("[")) {
+                    mimeType = "application/json";
+                } else if (content.startsWith("<")) {
+                    mimeType = "application/xml";
+                } else if (isPlainText(content)) {
+                    mimeType = "text/plain";
+                } else {
+                    mimeType = "application/octet-stream";
+                }
+            }
+            return ResponseBody.create(mockData, MediaType.get(mimeType));
+        } catch (Exception e) {
+            return ResponseBody.create(mockData, MediaType.get("application/json"));
+        }
+    }
+
+    private static boolean isPlainText(String content) {
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+            if (!(c >= 32 && c <= 126 || c == '\n' || c == '\r' || c == '\t')) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private String formatParameterStr() {
@@ -300,11 +371,10 @@ public class BaseHttpRequest implements LifecycleOwner {
     private MediaType responseMediaType;
     private Exception responseException;
 
-    private void onFinish(Response response) {
+    private void onFinish(ResponseBody body) {
         deleteRequestInfo(requestInfo);
-        try (Response r = response) {
+        try {
             if (downloadFile == null) {
-                ResponseBody body = r.body();
                 responseBytes = body.bytes();
                 responseMediaType = body.contentType();
                 String charset = responseMediaType.charset(StandardCharsets.UTF_8).name();
@@ -354,7 +424,6 @@ public class BaseHttpRequest implements LifecycleOwner {
                 byte[] buf = new byte[2048];
                 int len = 0;
                 long sum = 0;
-                ResponseBody body = r.body();
                 long total = body.contentLength();
                 try (InputStream is = body.byteStream();
                      FileOutputStream fos = new FileOutputStream(downloadFile)) {
@@ -1587,5 +1656,55 @@ public class BaseHttpRequest implements LifecycleOwner {
      */
     public long getDownloadProgressTotal() {
         return downloadProgressTotal;
+    }
+
+    public boolean isEnableMock() {
+        return enableMock;
+    }
+
+    /**
+     * 是否启用 mock 数据
+     *
+     * @param enableMock 启用 mock 数据
+     * @return this
+     */
+    public BaseHttpRequest setEnableMock(boolean enableMock) {
+        this.enableMock = enableMock;
+        return this;
+    }
+
+    public byte[] getMockData() {
+        return mockData;
+    }
+
+    /**
+     * 设置 mock 数据
+     *
+     * @param mockData mock 数据
+     * @return this
+     */
+    public BaseHttpRequest setMockData(byte[] mockData) {
+        this.mockData = mockData;
+        return this;
+    }
+
+    public BaseHttpRequest setMockData(String mockData) {
+        this.mockData = mockData.getBytes();
+        return this;
+    }
+
+    public BaseHttpRequest setMockAssetFile(Context context, String mockDataFileName) {
+        setMockData(AssetHelper.readTextFromAssets(context, mockDataFileName));
+        return this;
+    }
+
+    public BaseHttpRequest setMockData(JsonMap mockData) {
+        this.mockData = mockData.toString().getBytes();
+        return this;
+    }
+
+    public BaseHttpRequest setMockData(JSONObject mockData) {
+        this.mockData = mockData.toString().getBytes();
+        return this;
     }
 }
