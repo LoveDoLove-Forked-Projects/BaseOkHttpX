@@ -498,6 +498,8 @@ BaseOkHttpX.addGlobalMockData("/api/sentences", bytes);
 BaseOkHttpX.addGlobalMockDataFromAssetFile(MainActivity.this, "/api/sentences", "sentences.json");
 ```
 
+也可参阅：[如何创建 Mock 数据](https://github.com/kongzue/BaseOkHttpX/wiki/%E5%A6%82%E4%BD%95%E5%88%9B%E5%BB%BA-Mock-%E6%95%B0%E6%8D%AE)
+
 ## 日志输出
 
 BaseOkHttpX 的日志输出会在请求发起时和返回时进行打印，通过 `BaseOkHttpX.debugMode = true` 开启日志输出即可在 Logcat 中看到打印的请求日志：
