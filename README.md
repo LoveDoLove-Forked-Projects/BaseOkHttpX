@@ -458,7 +458,7 @@ Get.create("/api/sentences")                     // 创建主请求
 | [BaseMultiResponseListener](BaseOkHttpX/src/main/java/com/kongzue/baseokhttp/x/interfaces/BaseMultiResponseListener.java) | 仅返回原始的 okHttp 的 ResponseBody 集用于自行处理 | `ResponseBody` |
 | [BitmapMultiResponseListener](BaseOkHttpX/src/main/java/com/kongzue/baseokhttp/x/interfaces/BitmapMultiResponseListener.java) | 会以位图 Bitmap 格式的集合返回服务器响应的数据     | `Bitmap`       |
 
-## Mock 数据支持（正在建设）
+## Mock 数据支持
 Mock 数据是一种对于本地调试极为好用的方式，通过配置 mock 数据，可以无需实际进行网络请求，本地控制返回数据调试 app 功能，也方便开发者模拟需要的数据进行 app 功能调试。
 
 可以通过以下方式使用启用 mock 数据：
